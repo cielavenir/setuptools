@@ -1,4 +1,5 @@
 from distutils.errors import DistutilsArgError
+import sys
 import inspect
 import glob
 import warnings
@@ -6,6 +7,9 @@ import platform
 import distutils.command.install as orig
 
 import setuptools
+from pkg_resources import WorkingSet
+from pkg_resources import Requirement
+from pkg_resources import Environment
 
 # Prior to numpy 1.9, NumPy relies on the '_install' name, so provide it for
 # now. See https://github.com/pypa/setuptools/issues/199/
@@ -19,9 +23,11 @@ class install(orig.install):
         ('old-and-unmanageable', None, "Try not to use this!"),
         ('single-version-externally-managed', None,
          "used by system package builders to create 'flat' eggs"),
+        ('check-deps', None,
+         "force to check deps"),
     ]
     boolean_options = orig.install.boolean_options + [
-        'old-and-unmanageable', 'single-version-externally-managed',
+        'old-and-unmanageable', 'single-version-externally-managed', 'check-deps',
     ]
     new_commands = [
         ('install_egg_info', lambda self: True),
@@ -33,6 +39,7 @@ class install(orig.install):
         orig.install.initialize_options(self)
         self.old_and_unmanageable = None
         self.single_version_externally_managed = None
+        self.check_deps = None
 
     def finalize_options(self):
         orig.install.finalize_options(self)
@@ -58,6 +65,11 @@ class install(orig.install):
     def run(self):
         # Explicit request for old-style install?  Just do it
         if self.old_and_unmanageable or self.single_version_externally_managed:
+            if self.check_deps:
+                requires = self.distribution.install_requires
+                local_index = Environment(sys.path)
+
+                WorkingSet([]).resolve(list(map(Requirement,requires)), local_index)
             return orig.install.run(self)
 
         if not self._called_from_setup(inspect.currentframe()):
