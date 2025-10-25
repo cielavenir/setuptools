@@ -7,6 +7,16 @@ import textwrap
 import setuptools
 from setuptools.command.install import install
 
+if os.name == 'posix':
+    import sysconfig
+    def _get_preferred_schemes():
+        return {
+            'prefix': 'posix_prefix',
+            'home': 'posix_home',
+            'user': 'posix_user',
+        }
+    sysconfig._get_preferred_schemes = _get_preferred_schemes
+
 here = os.path.dirname(__file__)
 
 
